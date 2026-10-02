@@ -1,0 +1,663 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#070b14">
+<meta name="description" content="AgriMétéo Pro — suivi météorologique, prévisions 10 jours, aide à la décision agricole pour plus de 100 cultures et vidéos guidées.">
+<title>AgriMétéo Pro — Météo agricole & aide à la décision</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.5.1/css/all.min.css">
+<link rel="stylesheet" href="css/style.css?v=20261007">
+</head>
+<body data-theme="night" class="view-weather">
+
+<a class="skip-link" href="#main-view">Aller au contenu principal</a>
+
+<!-- ============ BARRE LATÉRALE (desktop) ============ -->
+<aside class="sidebar" id="sidebar" aria-label="Navigation principale">
+  <div class="sidebar__brand">
+    <span class="sidebar__logo" aria-hidden="true"><i class="fa-solid fa-cloud-sun-rain"></i></span>
+    <span class="sidebar__brandtext">
+      <strong>AgriMétéo Pro</strong>
+      <small>Météo &amp; décision agricole</small>
+    </span>
+  </div>
+
+  <nav class="sidebar__nav">
+    <button class="navbtn is-active" data-view="weather" type="button">
+      <i class="fa-solid fa-temperature-half" aria-hidden="true"></i><span>Météo</span>
+    </button>
+    <button class="navbtn" data-view="indicators" type="button">
+      <i class="fa-solid fa-gauge-high" aria-hidden="true"></i><span>Indicateurs</span>
+    </button>
+    <button class="navbtn" data-view="advice" type="button">
+      <i class="fa-solid fa-seedling" aria-hidden="true"></i><span>Aide à la décision</span>
+    </button>
+    <button class="navbtn" data-view="cultures" type="button">
+      <i class="fa-solid fa-wheat-awn" aria-hidden="true"></i><span>Cultures</span>
+    </button>
+    <button class="navbtn" data-view="videos" type="button">
+      <i class="fa-solid fa-circle-play" aria-hidden="true"></i><span>Vidéos guidées</span>
+    </button>
+    <button class="navbtn" data-view="news" type="button">
+      <i class="fa-solid fa-newspaper" aria-hidden="true"></i><span>Actus &amp; alertes</span>
+    </button>
+  </nav>
+
+  <div class="sidebar__foot">
+    <div class="sidebar__scoutembreak">
+      <span class="pill pill--ghost"><i class="fa-solid fa-bolt" aria-hidden="true"></i> Données open-source</span>
+    </div>
+    <button class="btn btn--ghost btn--block" id="open-settings" type="button">
+      <i class="fa-solid fa-sliders" aria-hidden="true"></i> Réglages
+    </button>
+    <p class="sidebar__credits">Open-Meteo · ReliefWeb</p>
+  </div>
+</aside>
+
+<div class="shell">
+
+  <!-- ============ EN-TÊTE ============ -->
+  <header class="topbar">
+    <button class="iconbtn topbar__burger" id="menu-toggle" type="button" aria-label="Ouvrir le menu" aria-expanded="false">
+      <i class="fa-solid fa-bars" aria-hidden="true"></i>
+    </button>
+
+    <button class="topbar__loc" id="open-citypicker" type="button" aria-haspopup="dialog">
+      <i class="fa-solid fa-location-dot" aria-hidden="true"></i>
+      <span id="topbar-city">Cotonou</span>
+      <span class="topbar__country" id="topbar-country">Bénin</span>
+      <i class="fa-solid fa-chevron-down topbar__chev" aria-hidden="true"></i>
+    </button>
+
+    <div class="topbar__actions">
+      <button class="iconbtn" id="btn-refresh" type="button" aria-label="Actualiser les données">
+        <i class="fa-solid fa-rotate" aria-hidden="true"></i>
+      </button>
+      <button class="iconbtn" id="btn-theme" type="button" aria-label="Changer de thème">
+        <i class="fa-solid fa-moon" aria-hidden="true"></i>
+      </button>
+      <button class="iconbtn iconbtn--accent" id="open-alerts" type="button" aria-label="Alertes personnalisées">
+        <i class="fa-solid fa-bell" aria-hidden="true"></i>
+        <span class="iconbtn__badge" id="alerts-badge" hidden>0</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- ============ BANDEAU MULTI-VILLES ============ -->
+  <div class="citystrip" id="citystrip" role="tablist" aria-label="Villes enregistrées"></div>
+
+  <!-- ============ CONTENU ============ -->
+  <main id="main-view" class="main">
+
+    <!-- ---------- VUE MÉTÉO ---------- -->
+    <section class="view is-active" id="view-weather" aria-labelledby="h-weather">
+      <h1 class="sr-only" id="h-weather">Conditions météorologiques actuelles</h1>
+
+      <article class="hero" id="hero-card">
+        <div class="hero__sky" id="hero-sky" aria-hidden="true"></div>
+        <div class="hero__body">
+          <p class="hero__eyebrow" id="hero-eyebrow">— <span id="hero-updated">mise à jour…</span></p>
+          <h2 class="hero__city" id="hero-city">Cotonou</h2>
+          <p class="hero__region" id="hero-region">Littoral, Bénin</p>
+          <div class="hero__main">
+            <span class="hero__icon" id="hero-icon" aria-hidden="true">☁️</span>
+            <span class="hero__temp" id="hero-temp">--°</span>
+          </div>
+          <p class="hero__cond" id="hero-cond">Chargement…</p>
+          <div class="hero__minmax">
+            <span><i class="fa-solid fa-temperature-arrow-up" aria-hidden="true"></i> Max <strong id="hero-max">--°</strong></span>
+            <span><i class="fa-solid fa-temperature-arrow-down" aria-hidden="true"></i> Min <strong id="hero-min">--°</strong></span>
+            <span><i class="fa-solid fa-temperature-half" aria-hidden="true"></i> Ressenti <strong id="hero-feels">--°</strong></span>
+          </div>
+          <ul class="hero__facts" id="hero-facts"></ul>
+        </div>
+      </article>
+
+      <section class="panel" id="hourly-panel">
+        <header class="panel__head">
+          <h2><i class="fa-solid fa-clock" aria-hidden="true"></i> Prévisions horaires — 48 h</h2>
+          <div class="segmented" id="hourly-toggle" role="group" aria-label="Métrique du graphique horaire">
+            <button class="segmented__btn is-active" data-metric="temp" type="button">Température</button>
+            <button class="segmented__btn" data-metric="rain" type="button">Pluie</button>
+            <button class="segmented__btn" data-metric="cloud" type="button">Nuages</button>
+          </div>
+        </header>
+        <div class="chartbox" id="hourly-chart" style="height:260px;">
+          <canvas id="canvas-hourly" aria-label="Graphique des prévisions horaires" role="img"></canvas>
+        </div>
+        <div class="hourstrip" id="hourstrip" aria-label="Heures clés"></div>
+      </section>
+
+      <section class="panel" id="daily-panel">
+        <header class="panel__head">
+          <h2><i class="fa-solid fa-calendar-days" aria-hidden="true"></i> Prévisions sur 10 jours</h2>
+          <span class="pill" id="daily-range">—</span>
+        </header>
+        <ul class="daylist" id="daylist"></ul>
+      </section>
+
+      <section class="panel" id="sunmoon-panel">
+        <header class="panel__head">
+          <h2><i class="fa-solid fa-circle-half-stroke" aria-hidden="true"></i> Soleil &amp; Lune</h2>
+        </header>
+        <div class="grid grid--sunmoon">
+          <div class="sunmoon__card">
+            <h3 class="sr-only">Soleil</h3>
+            <div class="sunmoon__arc" id="sun-arc">
+              <svg viewBox="0 0 200 110" role="img" aria-label="Course du soleil">
+                <path d="M10 100 A90 90 0 0 1 190 100" fill="none" stroke="rgba(255,255,255,.16)" stroke-width="3"/>
+                <path id="sun-arc-progress" d="M10 100 A90 90 0 0 1 190 100" fill="none" stroke="url(#sungrad)" stroke-width="4" stroke-linecap="round"/>
+                <circle id="sun-dot" cx="10" cy="100" r="7" fill="#ffd66b"/>
+                <defs>
+                  <linearGradient id="sungrad" x1="0" y1="0" x2="1" y2="0">
+                    <stop offset="0%" stop-color="#ff9d3c"/>
+                    <stop offset="100%" stop-color="#ffd66b"/>
+                  </linearGradient>
+                </defs>
+              </svg>
+            </div>
+            <dl class="kv">
+              <div><dt>Lever</dt><dd id="sun-rise">--:--</dd></div>
+              <div><dt>Coucher</dt><dd id="sun-set">--:--</dd></div>
+              <div><dt>Journée</dt><dd id="sun-length">--h--</dd></div>
+            </dl>
+          </div>
+          <div class="sunmoon__card">
+            <h3 class="sr-only">Lune</h3>
+            <div class="moon" id="moon-visual" aria-hidden="true"><span id="moon-shadow"></span></div>
+            <dl class="kv">
+              <div><dt>Phase</dt><dd id="moon-phase">—</dd></div>
+              <div><dt>Éclairage</dt><dd id="moon-illum">--%</dd></div>
+              <div><dt>Lever / Coucher</dt><dd id="moon-rise-set">--:-- / --:--</dd></div>
+            </dl>
+          </div>
+        </div>
+      </section>
+    </section>
+
+    <!-- ---------- VUE INDICATEURS ---------- -->
+    <section class="view" id="view-indicators" aria-labelledby="h-indicators">
+      <header class="viewhead">
+        <h1 id="h-indicators"><i class="fa-solid fa-gauge-high" aria-hidden="true"></i> Indicateurs climatologiques</h1>
+        <p class="viewhead__sub">Vent, humidité, pression, indice UV, visibilité, précipitations et température ressentie — avec l'interprétation agronomique de chaque valeur.</p>
+      </header>
+      <div class="grid grid--cards" id="indicator-grid"></div>
+
+      <section class="panel">
+        <header class="panel__head">
+          <h2><i class="fa-solid fa-chart-column" aria-hidden="true"></i> Comparaison température réelle / ressentie / point de rosée</h2>
+        </header>
+        <div class="chartbox" style="height:280px;">
+          <canvas id="canvas-feels" aria-label="Graphique température réelle, ressentie et point de rosée" role="img"></canvas>
+        </div>
+      </section>
+
+      <section class="panel">
+        <header class="panel__head"><h2><i class="fa-solid fa-compass" aria-hidden="true"></i> Rose des vents (48 h)</h2></header>
+        <div class="grid grid--2col">
+          <div class="chartbox" style="height:300px;">
+            <canvas id="canvas-wind" aria-label="Rose des vents" role="img"></canvas>
+          </div>
+          <dl class="kv kv--stack" id="wind-detail"></dl>
+        </div>
+      </section>
+    </section>
+
+    <!-- ---------- VUE AIDE À LA DÉCISION ---------- -->
+    <section class="view" id="view-advice" aria-labelledby="h-advice">
+      <header class="viewhead">
+        <h1 id="h-advice"><i class="fa-solid fa-seedling" aria-hidden="true"></i> Moteur d'aide à la décision</h1>
+        <p class="viewhead__sub">Analyse automatique des données météo et agronomiques : stress thermique, déficit hydrique, risque phytosanitaire, fenêtres de traitement et consignes concrètes.</p>
+      </header>
+
+      <div class="scorebar panel" id="score-panel">
+        <div class="scorebar__ring">
+          <svg viewBox="0 0 120 120" role="img" aria-label="Indice de conditions de travail">
+            <circle cx="60" cy="60" r="52" fill="none" stroke="rgba(255,255,255,.1)" stroke-width="12"/>
+            <circle id="score-arc" cx="60" cy="60" r="52" fill="none" stroke="#4ade80" stroke-width="12"
+                    stroke-linecap="round" stroke-dasharray="327" stroke-dashoffset="327" transform="rotate(-90 60 60)"/>
+          </svg>
+          <span class="scorebar__val" id="score-val">--</span>
+        </div>
+        <div class="scorebar__text">
+          <h2 id="score-title">Analyse en cours…</h2>
+          <p id="score-summary">Chargement des données météo et des parcelles.</p>
+          <div class="scorebar__chips" id="score-chips"></div>
+        </div>
+      </div>
+
+      <div class="grid grid--2col">
+        <section class="panel">
+          <header class="panel__head"><h2><i class="fa-solid fa-list-check" aria-hidden="true"></i> Recommandations prioritaires</h2></header>
+          <ol class="advicelist" id="advice-list"></ol>
+        </section>
+
+        <section class="panel">
+          <header class="panel__head"><h2><i class="fa-solid fa-calendar-check" aria-hidden="true"></i> Fenêtres d'action (72 h)</h2></header>
+          <div class="windowlist" id="window-grid"></div>
+        </section>
+      </div>
+
+      <section class="panel" id="parcel-advice-panel">
+        <header class="panel__head">
+          <h2><i class="fa-solid fa-map-location-dot" aria-hidden="true"></i> Diagnostic par parcelle</h2>
+          <button class="btn btn--sm btn--primary" id="btn-new-plot-2" type="button"><i class="fa-solid fa-plus" aria-hidden="true"></i> Nouvelle parcelle</button>
+        </header>
+        <div id="parcel-diagnostic" class="parceldiag"></div>
+      </section>
+
+      <section class="panel">
+        <header class="panel__head"><h2><i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i> Alertes déclenchées</h2></header>
+        <div id="triggered-alerts" class="alertlist"></div>
+      </section>
+    </section>
+
+    <!-- ---------- VUE CULTURES ---------- -->
+    <section class="view" id="view-cultures" aria-labelledby="h-cultures">
+      <header class="viewhead">
+        <h1 id="h-cultures"><i class="fa-solid fa-wheat-awn" aria-hidden="true"></i> Bibliothèque des cultures &amp; itinéraires techniques</h1>
+        <p class="viewhead__sub">Toutes les options culturales et d'élevage : exigences climatiques, sols, cycles, calenders de semis, rendements, ravageurs et itinéraires techniques complets.</p>
+      </header>
+
+      <section class="panel">
+        <header class="panel__head">
+          <h2><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i> Catalogue filtrable</h2>
+          <span class="pill" id="crop-count">—</span>
+        </header>
+        <div class="filterbar">
+          <label class="field field--grow">
+            <span class="sr-only">Rechercher une culture</span>
+            <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
+            <input type="search" id="crop-search" placeholder="Rechercher : maïs, coton, igname, tilapia…" autocomplete="off">
+          </label>
+          <label class="field">
+            <span class="sr-only">Catégorie</span>
+            <select id="crop-category"><option value="">Toutes catégories</option></select>
+          </label>
+          <label class="field">
+            <span class="sr-only">Besoin en eau</span>
+            <select id="crop-water">
+              <option value="">Tous besoins en eau</option>
+              <option value="faible">Faible</option>
+              <option value="moyen">Moyen</option>
+              <option value="eleve">Élevé</option>
+              <option value="tres_eleve">Très élevé</option>
+            </select>
+          </label>
+          <label class="field">
+            <span class="sr-only">Compatibilité météo</span>
+            <select id="crop-compat">
+              <option value="">Toutes compatibilités</option>
+              <option value="ok">Compatibles météo actuelle</option>
+              <option value="warn">À surveiller</option>
+              <option value="risk">Déconseillées maintenant</option>
+            </select>
+          </label>
+          <label class="field">
+            <span class="sr-only">Trier par</span>
+            <select id="crop-sort">
+              <option value="name">Trier : nom</option>
+              <option value="cycle">Trier : cycle court</option>
+              <option value="rain">Trier : besoin en eau</option>
+            </select>
+          </label>
+          <button class="btn btn--ghost btn--sm" id="btn-add-crop" type="button"><i class="fa-solid fa-plus" aria-hidden="true"></i> Ma culture</button>
+        </div>
+        <div class="cropgrid" id="crop-grid"></div>
+        <nav class="pager" id="crop-pager" aria-label="Pagination du catalogue"></nav>
+      </section>
+
+      <section class="panel" id="plots-panel">
+        <header class="panel__head">
+          <h2><i class="fa-solid fa-map-location-dot" aria-hidden="true"></i> Mes parcelles</h2>
+          <button class="btn btn--sm btn--primary" id="btn-new-plot" type="button"><i class="fa-solid fa-plus" aria-hidden="true"></i> Ajouter</button>
+        </header>
+        <div class="plotgrid" id="plot-grid"></div>
+      </section>
+
+      <section class="panel" id="journal-panel">
+        <header class="panel__head">
+          <h2><i class="fa-solid fa-clipboard-list" aria-hidden="true"></i> Journal de culture</h2>
+          <div class="filterbar filterbar--compact">
+            <label class="field">
+              <span class="sr-only">Filtrer par parcelle</span>
+              <select id="journal-plot"><option value="">Toutes les parcelles</option></select>
+            </label>
+            <button class="btn btn--sm btn--primary" id="btn-new-entry" type="button"><i class="fa-solid fa-plus" aria-hidden="true"></i> Nouvelle entrée</button>
+          </div>
+        </header>
+        <ul class="timeline" id="journal-list"></ul>
+        <div class="stats" id="journal-stats"></div>
+      </section>
+    </section>
+
+    <!-- ---------- VUE VIDÉOS ---------- -->
+    <section class="view" id="view-videos" aria-labelledby="h-videos">
+      <header class="viewhead">
+        <h1 id="h-videos"><i class="fa-solid fa-circle-play" aria-hidden="true"></i> Vidéos guidées par situation</h1>
+        <p class="viewhead__sub">Chaque fiche devient un clip animé en 3D, généré à partir de ses étapes et conseils, avec lecture, pause et narration.</p>
+      </header>
+
+      <div class="situationbar" id="situationbar" role="tablist" aria-label="Filtrer par situation"></div>
+
+      <div class="grid grid--2col" id="video-layout">
+        <div class="videogrid" id="video-grid"></div>
+
+        <section class="player" id="player" aria-label="Lecteur de la fiche vidéo">
+          <div class="player__stage" id="player-stage">
+            <div class="player__slide" id="player-slide" aria-live="polite">
+              <p class="player__empty">Sélectionnez une fiche vidéo pour démarrer la lecture guidée.</p>
+            </div>
+            <div class="player__caption" id="player-caption" hidden>
+              <span class="player__chapter" id="player-chapter">Étape 1</span>
+              <span class="player__chaptername" id="player-chaptername"></span>
+            </div>
+          </div>
+          <div class="player__bar">
+            <button class="iconbtn" id="player-play" type="button" aria-label="Lecture / pause"><i class="fa-solid fa-play" aria-hidden="true"></i></button>
+            <button class="iconbtn" id="player-prev" type="button" aria-label="Étape précédente"><i class="fa-solid fa-backward-step" aria-hidden="true"></i></button>
+            <button class="iconbtn" id="player-next" type="button" aria-label="Étape suivante"><i class="fa-solid fa-forward-step" aria-hidden="true"></i></button>
+            <input type="range" id="player-scrub" min="0" max="0" value="0" aria-label="Avancer dans la vidéo">
+            <span class="player__time" id="player-time">0:00 / 0:00</span>
+            <button class="iconbtn" id="player-voice" type="button" aria-label="Activer la narration vocale" aria-pressed="false"><i class="fa-solid fa-volume-xmark" aria-hidden="true"></i></button>
+            <button class="iconbtn" id="player-full" type="button" aria-label="Plein écran"><i class="fa-solid fa-expand" aria-hidden="true"></i></button>
+          </div>
+          <h3 class="player__title" id="player-title">Aucune fiche sélectionnée</h3>
+          <p class="player__sum" id="player-summary">—</p>
+          <div class="player__storyboard" id="player-storyboard"></div>
+          <div class="player__actions">
+            <button class="btn btn--sm btn--ghost" id="player-transcript" type="button"><i class="fa-solid fa-align-left" aria-hidden="true"></i> Transcription</button>
+            <button class="btn btn--sm btn--ghost" id="player-print" type="button"><i class="fa-solid fa-print" aria-hidden="true"></i> Fiche terrain</button>
+          </div>
+        </section>
+      </div>
+    </section>
+
+    <!-- ---------- VUE ACTUS ---------- -->
+    <section class="view" id="view-news" aria-labelledby="h-news">
+      <header class="viewhead">
+        <h1 id="h-news"><i class="fa-solid fa-newspaper" aria-hidden="true"></i> Actualités &amp; événements météo-climatiques</h1>
+        <p class="viewhead__sub">Bulletins, veille sanitaire et événements en direct (ReliefWeb / OCHA) croisés avec les alertes agro-climatiques locales.</p>
+      </header>
+
+      <section class="panel">
+        <header class="panel__head">
+          <h2><i class="fa-solid fa-satellite-dish" aria-hidden="true"></i> Fil d'actualités</h2>
+          <div class="filterbar filterbar--compact">
+            <label class="field">
+              <span class="sr-only">Source</span>
+              <select id="news-source">
+                <option value="all">Tout</option>
+                <option value="local">Rédaction locale</option>
+                <option value="reliefweb">Veille internationale (live)</option>
+              </select>
+            </label>
+            <label class="field">
+              <span class="sr-only">Rechercher</span>
+              <input type="search" id="news-search" placeholder="Filtrer par mot-clé…">
+            </label>
+            <button class="btn btn--sm btn--ghost" id="news-refresh" type="button"><i class="fa-solid fa-rotate" aria-hidden="true"></i> Rafraîchir</button>
+          </div>
+        </header>
+        <div class="newsgrid" id="news-grid"></div>
+      </section>
+
+      <section class="panel">
+        <header class="panel__head"><h2><i class="fa-solid fa-tower-broadcast" aria-hidden="true"></i> Événements en direct</h2></header>
+        <ul class="livefeed" id="live-feed"></ul>
+      </section>
+    </section>
+  </main>
+
+  <!-- ============ BARRE INFÉRIEURE (mobile) ============ -->
+  <nav class="tabbar" aria-label="Navigation mobile">
+    <button class="tabbar__btn is-active" data-view="weather" type="button"><i class="fa-solid fa-temperature-half" aria-hidden="true"></i><span>Météo</span></button>
+    <button class="tabbar__btn" data-view="advice" type="button"><i class="fa-solid fa-seedling" aria-hidden="true"></i><span>Conseils</span></button>
+    <button class="tabbar__btn" data-view="cultures" type="button"><i class="fa-solid fa-wheat-awn" aria-hidden="true"></i><span>Cultures</span></button>
+    <button class="tabbar__btn" data-view="videos" type="button"><i class="fa-solid fa-circle-play" aria-hidden="true"></i><span>Vidéos</span></button>
+    <button class="tabbar__btn" data-view="news" type="button"><i class="fa-solid fa-newspaper" aria-hidden="true"></i><span>Actus</span></button>
+  </nav>
+</div>
+
+<!-- ============ BOUTON CHATBOT ============ -->
+<button class="chatlauncher" id="chat-launcher" type="button" aria-label="Ouvrir l'assistant AgriMétéo">
+  <span class="chatlauncher__pulse" aria-hidden="true"></span>
+  <i class="fa-solid fa-comments" aria-hidden="true"></i>
+  <span class="chatlauncher__txt">Assistant</span>
+</button>
+
+<!-- ============ PANNEAU CHATBOT ============ -->
+<section class="chatpanel" id="chat-panel" aria-label="Assistant AgriMétéo" hidden>
+  <header class="chatpanel__head">
+    <span class="chatpanel__avatar" aria-hidden="true"><i class="fa-solid fa-robot"></i></span>
+    <div class="chatpanel__id">
+      <strong>AgriBot</strong>
+      <small id="chat-context">Contexte : Cotonou</small>
+    </div>
+    <button class="iconbtn" id="chat-voice-toggle" type="button" aria-label="Réponses vocales" aria-pressed="false"><i class="fa-solid fa-volume-xmark" aria-hidden="true"></i></button>
+    <button class="iconbtn" id="chat-clear" type="button" aria-label="Effacer la conversation"><i class="fa-solid fa-eraser" aria-hidden="true"></i></button>
+    <button class="iconbtn" id="chat-close" type="button" aria-label="Fermer l'assistant"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button>
+  </header>
+  <div class="chatpanel__log" id="chat-log" role="log" aria-live="polite" aria-relevant="additions"></div>
+  <div class="chatpanel__quick" id="chat-quick"></div>
+  <form class="chatpanel__form" id="chat-form" autocomplete="off">
+    <label class="sr-only" for="chat-input">Votre question</label>
+    <textarea id="chat-input" rows="1" placeholder="Posez votre question : « quand arroser mon maïs ? »" maxlength="500"></textarea>
+    <button class="btn btn--primary btn--icon" type="submit" aria-label="Envoyer"><i class="fa-solid fa-paper-plane" aria-hidden="true"></i></button>
+  </form>
+  <p class="chatpanel__note">Réponses générées hors ligne à partir des données météo et agronomiques du site. Ce n'est pas un service d'urgence.</p>
+</section>
+
+<!-- ============ MODALES ============ -->
+<div class="modal" id="modal-citypicker" hidden role="dialog" aria-modal="true" aria-labelledby="mc-title">
+  <div class="modal__scrim" data-close></div>
+  <div class="modal__box">
+    <header class="modal__head">
+      <h2 id="mc-title"><i class="fa-solid fa-location-dot" aria-hidden="true"></i> Choisir une ville</h2>
+      <button class="iconbtn" data-close type="button" aria-label="Fermer"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button>
+    </header>
+    <div class="modal__body">
+      <form class="field field--inline">
+        <label class="sr-only" for="geo-search">Rechercher une ville dans le monde</label>
+        <input type="search" id="geo-search" placeholder="Rechercher : Cotonou, Ouagadougou, Dakar…">
+        <button class="btn btn--primary btn--sm" type="submit">Chercher</button>
+      </form>
+      <div id="geo-results" class="georesults"></div>
+      <h3>Mes villes</h3>
+      <ul class="citymanager" id="city-manager"></ul>
+      <button class="btn btn--ghost btn--block" id="geo-locate" type="button"><i class="fa-solid fa-location-crosshairs" aria-hidden="true"></i> Utiliser ma position GPS</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal" id="modal-alerts" hidden role="dialog" aria-modal="true" aria-labelledby="ma-title">
+  <div class="modal__scrim" data-close></div>
+  <div class="modal__box modal__box--wide">
+    <header class="modal__head">
+      <h2 id="ma-title"><i class="fa-solid fa-bell" aria-hidden="true"></i> Alertes personnalisées</h2>
+      <button class="iconbtn" data-close type="button" aria-label="Fermer"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button>
+    </header>
+    <div class="modal__body">
+      <p class="muted">Définissez vos seuils : l'application évalue chaque règle sur les prévisions et affiche (ou notifie) l'alerte dès qu'elle se déclenche.</p>
+      <form class="formgrid" id="alert-form">
+        <label class="field"><span>Nom de la règle</span><input type="text" name="name" required placeholder="Ex : Gel nocturne maraîchage"></label>
+        <label class="field"><span>Ville</span><select name="city_id" id="alert-city"></select></label>
+        <label class="field"><span>Indicateur</span>
+          <select name="metric">
+            <option value="temp_min">Température minimale (°C)</option>
+            <option value="temp_max">Température maximale (°C)</option>
+            <option value="rain_prob">Probabilité de pluie (%)</option>
+            <option value="rain_mm">Cumul de pluie (mm)</option>
+            <option value="wind_kmh">Vent (km/h)</option>
+            <option value="humidity">Humidité (%)</option>
+            <option value="uv">Indice UV</option>
+            <option value="pressure">Pression (hPa)</option>
+          </select>
+        </label>
+        <label class="field"><span>Condition</span>
+          <select name="operator"><option value=">">supérieur à</option><option value=">=">supérieur ou égal à</option><option value="<">inférieur à</option><option value="<=">inférieur ou égal à</option></select>
+        </label>
+        <label class="field"><span>Seuil</span><input type="number" name="threshold" step="0.1" required value="30"></label>
+        <label class="field"><span>Horizon (heures)</span><input type="number" name="window_hours" min="6" max="240" value="24"></label>
+        <label class="field field--full"><span>Message / consigne</span><textarea name="message" rows="2" placeholder="Consigne à afficher quand l'alerte se déclenche"></textarea></label>
+        <label class="switch field--full"><input type="checkbox" name="notify_browser" checked><span>Notifier le navigateur (si autorisé)</span></label>
+        <button class="btn btn--primary field--full" type="submit"><i class="fa-solid fa-plus" aria-hidden="true"></i> Créer la règle</button>
+      </form>
+      <h3>Règles actives</h3>
+      <ul class="rulelist" id="alert-rules"></ul>
+      <button class="btn btn--ghost btn--block" id="btn-enable-notif" type="button"><i class="fa-solid fa-bell-concierge" aria-hidden="true"></i> Autoriser les notifications du navigateur</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal" id="modal-plot" hidden role="dialog" aria-modal="true" aria-labelledby="mp-title">
+  <div class="modal__scrim" data-close></div>
+  <div class="modal__box">
+    <header class="modal__head">
+      <h2 id="mp-title"><i class="fa-solid fa-map-location-dot" aria-hidden="true"></i> Parcelle</h2>
+      <button class="iconbtn" data-close type="button" aria-label="Fermer"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button>
+    </header>
+    <div class="modal__body">
+      <form class="formgrid" id="plot-form">
+        <input type="hidden" name="id">
+        <label class="field field--full"><span>Nom</span><input type="text" name="name" required placeholder="Ex : Champ maïs Nord"></label>
+        <label class="field"><span>Ville météo</span><select name="city_id" id="plot-city"></select></label>
+        <label class="field"><span>Culture</span><select name="crop_id" id="plot-crop"></select></label>
+        <label class="field"><span>Surface (ha)</span><input type="number" name="surface" step="0.01" min="0" value="0.5"></label>
+        <label class="field"><span>Type de sol</span>
+          <select name="soil">
+            <option value="sableux">Sableux</option>
+            <option value="limono-sableux">Limono-sableux</option>
+            <option value="limoneux">Limoneux</option>
+            <option value="argileux">Argileux</option>
+            <option value="ferralitique">Ferralitique</option>
+            <option value="hydromorphe">Hydromorphe (bas-fond)</option>
+            <option value="lateritique">Latéritique caillouteux</option>
+          </select>
+        </label>
+        <label class="field"><span>Irrigation</span>
+          <select name="irrigation">
+            <option value="pluviale">Pluviale (sans irrigation)</option>
+            <option value="goutte">Goutte à goutte</option>
+            <option value="aspersion">Aspersion</option>
+            <option value="manuel">Arrosoir / motopompe</option>
+            <option value="gravitaire">Gravitaire / raies</option>
+          </select>
+        </label>
+        <label class="field"><span>Date de semis / mise en place</span><input type="date" name="planting_date"></label>
+        <label class="field"><span>Stade actuel</span><input type="text" name="stage" placeholder="Ex : floraison (55 j)"></label>
+        <label class="field field--full"><span>Notes</span><textarea name="notes" rows="2"></textarea></label>
+        <button class="btn btn--primary field--full" type="submit"><i class="fa-solid fa-floppy-disk" aria-hidden="true"></i> Enregistrer la parcelle</button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<div class="modal" id="modal-journal" hidden role="dialog" aria-modal="true" aria-labelledby="mj-title">
+  <div class="modal__scrim" data-close></div>
+  <div class="modal__box">
+    <header class="modal__head">
+      <h2 id="mj-title"><i class="fa-solid fa-clipboard-list" aria-hidden="true"></i> Entrée du journal</h2>
+      <button class="iconbtn" data-close type="button" aria-label="Fermer"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button>
+    </header>
+    <div class="modal__body">
+      <form class="formgrid" id="journal-form">
+        <input type="hidden" name="id">
+        <label class="field"><span>Parcelle</span><select name="plot_id" id="journal-plot-select" required></select></label>
+        <label class="field"><span>Date</span><input type="date" name="date" required></label>
+        <label class="field"><span>Type d'opération</span>
+          <select name="kind">
+            <option value="semis">Semis / plantation</option>
+            <option value="intrant">Intrant (fertilisant, amendement)</option>
+            <option value="arrosage">Arrosage / irrigation</option>
+            <option value="traitement">Traitement phytosanitaire</option>
+            <option value="observation">Observation / état sanitaire</option>
+            <option value="recolte">Récolte</option>
+            <option value="autre">Autre</option>
+          </select>
+        </label>
+        <label class="field"><span>Intitulé</span><input type="text" name="title" required placeholder="Ex : Urée 50 kg/ha"></label>
+        <label class="field"><span>Coût (FCFA)</span><input type="number" name="cost" min="0" step="100" value="0"></label>
+        <label class="field"><span>Pluie relevée (mm)</span><input type="number" name="rain_mm" min="0" step="0.1" value="0"></label>
+        <label class="field field--full"><span>Détail</span><textarea name="detail" rows="3"></textarea></label>
+        <button class="btn btn--primary field--full" type="submit"><i class="fa-solid fa-floppy-disk" aria-hidden="true"></i> Enregistrer l'entrée</button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<div class="modal" id="modal-crop" hidden role="dialog" aria-modal="true" aria-labelledby="mcr-title">
+  <div class="modal__scrim" data-close></div>
+  <div class="modal__box modal__box--wide">
+    <header class="modal__head">
+      <h2 id="mcr-title"><i class="fa-solid fa-wheat-awn" aria-hidden="true"></i> Fiche culture</h2>
+      <button class="iconbtn" data-close type="button" aria-label="Fermer"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button>
+    </header>
+    <div class="modal__body" id="crop-detail"></div>
+  </div>
+</div>
+
+<div class="modal" id="modal-settings" hidden role="dialog" aria-modal="true" aria-labelledby="ms-title">
+  <div class="modal__scrim" data-close></div>
+  <div class="modal__box">
+    <header class="modal__head">
+      <h2 id="ms-title"><i class="fa-solid fa-sliders" aria-hidden="true"></i> Réglages</h2>
+      <button class="iconbtn" data-close type="button" aria-label="Fermer"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button>
+    </header>
+    <div class="modal__body">
+      <form class="formgrid" id="settings-form">
+        <label class="field field--full"><span>Thème</span>
+          <select name="theme_mode">
+            <option value="auto">Automatique (heure + météo)</option>
+            <option value="night">Nuit permanente</option>
+            <option value="dawn">Aube claire</option>
+            <option value="day">Jour clair</option>
+            <option value="rain">Pluie</option>
+            <option value="heat">Forte chaleur</option>
+          </select>
+        </label>
+        <label class="field field--full"><span>Unités de température</span>
+          <select name="units"><option value="metric">Celsius (°C)</option><option value="imperial">Fahrenheit (°F)</option></select>
+        </label>
+        <label class="switch field--full"><input type="checkbox" name="voice_reply"><span>Réponses vocales du chatbot</span></label>
+        <label class="switch field--full"><input type="checkbox" name="compact"><span>Mode compact (marges réduites)</span></label>
+        <button class="btn btn--primary field--full" type="submit"><i class="fa-solid fa-floppy-disk" aria-hidden="true"></i> Enregistrer</button>
+      </form>
+      <h3>Mon profil agricole</h3>
+      <form class="formgrid" id="profile-form">
+        <label class="field field--full"><span>Zone agro-écologique habituelle</span>
+          <select name="zone" id="profile-zone"></select>
+        </label>
+        <label class="field field--full"><span>Culture principale</span><select name="main_crop" id="profile-crop"></select></label>
+        <button class="btn btn--ghost field--full" type="submit"><i class="fa-solid fa-seedling" aria-hidden="true"></i> Affiner mes conseils</button>
+      </form>
+      <h3>Mes cultures personnalisées</h3>
+      <ul class="rulelist" id="custom-crop-list"></ul>
+      <button class="btn btn--ghost btn--block" id="btn-reset-demo" type="button"><i class="fa-solid fa-location-crosshairs" aria-hidden="true"></i> Recharger et recalculer (position, prévisions, conseils)</button>
+    </div>
+  </div>
+</div>
+
+<div class="toastwrap" id="toast-wrap" aria-live="polite" aria-atomic="false"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/0.149.0/three.min.js"></script>
+<script src="js/config.js?v=20261003"></script>
+<script src="js/crops.js?v=20261003"></script>
+<script src="js/videos.js?v=20261003"></script>
+<script src="js/knowledge.js?v=20261003"></script>
+<script src="js/store.js?v=20261004"></script>
+<script src="js/weather.js?v=20261003"></script>
+<script src="js/agri.js?v=20261003"></script>
+<script src="js/cultures.js?v=20261003"></script>
+<script src="js/news.js?v=20261003"></script>
+<script src="js/generatedvideo.js?v=20261009"></script>
+<script src="js/videoview.js?v=20261003"></script>
+<script src="js/chatbot.js?v=20261003"></script>
+<script src="js/app.js?v=20261011"></script>
+</body>
+</html>

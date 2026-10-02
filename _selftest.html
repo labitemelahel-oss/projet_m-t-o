@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="fr"><head><meta charset="UTF-8"><title>Banc de tests AgriMétéo</title></head><body>
+<!-- Conteneurs minimaux, identifiants UNIQUES, types conformes à index.html -->
+<div id="toast-wrap"></div>
+<div id="chat-log"></div><div id="chat-quick"></div><div id="chat-context"></div>
+<div id="chat-panel" hidden></div><textarea id="chat-input"></textarea>
+<div id="crop-detail"></div>
+<div id="modal-crop" hidden></div><div id="modal-alerts" hidden></div><div id="modal-plot" hidden></div>
+<div id="modal-journal" hidden></div><div id="modal-settings" hidden></div>
+<select id="alert-city"></select><ul id="alert-rules"></ul>
+<select id="plot-city"></select><select id="plot-crop"></select>
+<select id="journal-plot"></select><select id="journal-plot-select"></select>
+<ul id="custom-crop-list"></ul>
+<select id="profile-zone"></select><select id="profile-crop"></select>
+<select id="crop-category"></select>
+<select id="crop-compat"><option value="">toutes</option><option value="ok">ok</option><option value="warn">warn</option><option value="risk">risk</option></select>
+<select id="crop-water"><option value="">tous</option><option value="faible">faible</option><option value="moyen">moyen</option><option value="eleve">eleve</option><option value="tres_eleve">tres_eleve</option></select>
+<select id="crop-sort"><option value="name">nom</option><option value="cycle">cycle</option><option value="rain">eau</option></select>
+<input type="search" id="crop-search">
+<div id="score-arc"></div><div id="score-val"></div><div id="score-title"></div><div id="score-summary"></div>
+<div id="score-chips"></div><ol id="advice-list"></ol><div id="window-grid"></div>
+<div id="parcel-diagnostic"></div><div id="triggered-alerts"></div><span id="alerts-badge"></span>
+<div id="plot-grid"></div><ul id="journal-list"></ul><div id="journal-stats"></div>
+<div id="crop-grid"></div><span id="crop-count"></span><nav id="crop-pager"></nav>
+<div id="indicator-grid"></div><ul id="daylist"></ul><div id="hourstrip"></div><ul id="hero-facts"></ul>
+<dl id="wind-detail"></dl><div id="daily-range"></div>
+<div id="moon-shadow"></div><div id="sun-rise"></div><div id="sun-set"></div><div id="sun-length"></div>
+<div id="moon-phase"></div><div id="moon-illum"></div><div id="moon-rise-set"></div>
+<svg width="200" height="110"><path id="sun-arc-progress" d="M10 100 A90 90 0 0 1 190 100" fill="none"></path>
+<circle id="sun-dot" cx="10" cy="100" r="7"></circle></svg>
+<canvas id="canvas-hourly"></canvas><canvas id="canvas-feels"></canvas><canvas id="canvas-wind"></canvas>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="js/config.js?v=20261002"></script>
+<script src="js/crops.js?v=20261002"></script>
+<script src="js/videos.js?v=20261002"></script>
+<script src="js/knowledge.js?v=20261002"></script>
+<script src="js/store.js?v=20261002"></script>
+<script src="js/weather.js?v=20261002"></script>
+<script src="js/agri.js?v=20261002"></script>
+<script src="js/cultures.js?v=20261002"></script>
+<script src="js/generatedvideo.js?v=20261009"></script>
+<script src="js/chatbot.js?v=20261002"></script>
+<script>
+'use strict';
+const R = [];
+window.onerror = function (m, s, l, c) { console.log('**FAIL** | erreur globale :: ' + m + ' @' + l + ':' + c); return false; };
+function openModal(id) { const m = el(id); if (m) m.hidden = false; }
+function closeModal(id) { const m = el(typeof id === 'string' ? id : id.id); if (m) m.hidden = true; }
+function ok(name, cond, extra) {
+  const line = (cond ? 'PASS' : '**FAIL**') + ' | ' + name + (extra !== undefined ? ' :: ' + extra : '');
+  R.push(line); console.log(line);
+}
+function resetFilters() {
+  el('crop-category').value = ''; el('crop-compat').value = '';
+  el('crop-water').value = ''; el('crop-search').value = '';
+  el('crop-sort').value = 'name'; Culture.page = 1;
+}
+
+async function run() {
+  /* ---------- 1. Base de cultures ---------- */
+  ok('Base de cultures chargée', CropDB.all.length >= 120, CropDB.all.length + ' fiches');
+  const ids = CropDB.all.map(function (c) { return c.id; });
+  ok('Identifiants uniques', new Set(ids).size === ids.length, ids.length + ' identifiants');
+  ok('Chaque fiche a un itinéraire de stades', CropDB.all.every(function (c) {
+    return c.growing_stages && c.growing_stages.length >= 4 &&
+      c.growing_stages.every(function (s) { return s.name && s.key_needs !== undefined && s.days !== undefined; });
+  }), CropDB.all.filter(function (c) { return !c.growing_stages || c.growing_stages.length < 4; }).map(function (c) { return c.name; }).join(',') || 'aucune anomalie');
+  ok('Chaque fiche a un calendrier de semis', CropDB.all.every(function (c) { return c.calendar && c.calendar.length; }));
+  const cats = {}; CropDB.all.forEach(function (c) { cats[c.category] = (cats[c.category] || 0) + 1; });
+  ok('Catégories couvertes', Object.keys(cats).length >= 11, JSON.stringify(cats));
+
+  /* ---------- 2. Météo réelle ---------- */
+  let w = null;
+  try {
+    const city = { id: 'city-cotonou', name: 'Cotonou', country: 'Bénin', admin1: 'Littoral', latitude: 6.3654, longitude: 2.4183, timezone: 'Africa/Porto-Novo' };
+    const raw = await getJSON(forecastUrl(city), 20000);
+    w = normalizeWeather(raw, city);
+    State.weather = w; State.cities = [city]; State.activeCityId = 'city-cotonou';
+    ok('Prévisions chargées', !!w && w.daily.length >= 8, w ? w.daily.length + ' jours / ' + w.hourly.length + ' heures' : 'échec');
+    ok('Série des 48 h disponible', w && w.next48.length >= 45, w ? w.next48.length + ' points' : '');
+    ok('Conditions courantes interprétées', w && typeof w.current.temp === 'number' && w.current.codeText !== 'Conditions inconnues',
+      w ? round1(w.current.temp) + ' °C / ' + w.current.codeText : '');
+    ok('Bilan hydrique (pluie - ET0)', w && isFinite(w.balance.balance) && w.balance.et0 > 0,
+      w ? 'pluie ' + round1(w.balance.rain) + ' mm / ET0 ' + round1(w.balance.et0) + ' mm' : '');
+    ok('Point de rosée cohérent', w && w.current.dew !== null && w.current.dew < w.current.temp,
+      w ? round1(w.current.dew) + ' < ' + round1(w.current.temp) : '');
+    ok('Ressenti calculé', w && w.current.feels !== null, w ? round1(w.current.feels) + ' °C' : '');
+    ok('Phase lunaire', w && w.moon && w.moon.name.length > 0, w ? w.moon.name + ' (' + w.moon.illum + ' %)' : '');
+    ok('Lever et coucher du soleil', w && w.daily[0].sunrise && w.daily[0].sunset, w ? hhmm(w.daily[0].sunrise) + ' → ' + hhmm(w.daily[0].sunset) : '');
+  } catch (e) { ok('Prévisions chargées', false, e.message); }
+
+  /* ---------- 3. Moteur agronomique ---------- */
+  if (w) {
+    const recos = buildRecommendations(w);
+    ok('Recommandations produites', recos.length >= 5, recos.length + ' recommandations');
+    ok('Recommandations complètes', recos.every(function (r) { return ['high', 'mid', 'low'].indexOf(r.lvl) >= 0 && r.title && r.body && r.icon; }));
+    const score = computeScore(recos, w);
+    ok('Indice de conditions borné 0-100', score >= 0 && score <= 100, 'indice ' + score);
+    const wins = buildWindows(w);
+    ok('Fenêtres d\'action (5 actions x 3 jours)', wins.length === 15, wins.length + ' cellules');
+    ok('Fenêtres qualifiées', wins.every(function (x) { return ['good', 'mid', 'bad'].indexOf(x.level) >= 0 && x.note; }));
+    const comps = CropDB.all.map(function (c) { return cropCompatibility(c, w); });
+    ok('Compatibilités calculées pour toutes les cultures', comps.every(function (c) { return c && c.score >= 0 && c.score <= 100 && c.reasons.length; }));
+    const dist = { ok: 0, warn: 0, risk: 0 }; comps.forEach(function (c) { dist[c.level]++; });
+    ok('Répartition des compatibilités', dist.ok + dist.warn + dist.risk === CropDB.all.length, JSON.stringify(dist));
+    ok('Compatibilité discriminante', cropCompatibility(CropDB.byId('crop-riz'), w).score !== cropCompatibility(CropDB.byId('crop-coton'), w).score,
+      'riz ' + cropCompatibility(CropDB.byId('crop-riz'), w).score + ' vs coton ' + cropCompatibility(CropDB.byId('crop-coton'), w).score);
+    const autos = autoAlerts(w);
+    ok('Alertes automatiques', autos.length > 0 && autos.every(function (a) { return a.title && a.body && a.sev; }),
+      autos.map(function (a) { return a.title; }).join(' | '));
+
+    State.plots = [{ id: 'p1', name: 'Parcelle test', city_id: 'city-cotonou', crop_id: 'crop-mais', crop_name: 'Maïs', surface: 0.5, soil: 'sableux', irrigation: 'manuel', planting_date: isoDate(new Date(Date.now() - 40 * 86400000)), stage: '' }];
+    State.customCrops = [];
+    const diag = plotDiagnostic(State.plots[0], w);
+    ok('Diagnostic de parcelle', !!diag && diag.notes.length >= 3 && !!diag.stage,
+      diag ? diag.notes.length + ' notes · stade « ' + diag.stage.name + ' » · irrigation ' + diag.irrigationMm + ' mm' : 'échec');
+    ok('Rendu du diagnostic', (function () { Agri.renderDiagnostics(w); return el('parcel-diagnostic').innerHTML.indexOf('Parcelle test') >= 0; })());
+    ok('Rendu conseils et fenêtres', (function () {
+      Agri.renderScore(score, recos, w); Agri.renderAdvice(recos); Agri.renderWindows(wins); Agri.renderAlerts(w);
+      return el('advice-list').children.length >= 5 && el('window-grid').children.length === 15 && el('triggered-alerts').children.length > 0;
+    })(), el('advice-list').children.length + ' conseils / ' + el('window-grid').children.length + ' fenêtres');
+    ok('Rendu des 11 indicateurs', (function () { renderIndicators(); return el('indicator-grid').children.length === 11; })(), el('indicator-grid').children.length + ' cartes');
+    ok('Rendu des 10 jours', (function () { renderDayList(); return el('daylist').children.length === 10; })(), el('daylist').children.length + ' jours');
+    ok('Rendu horaire', (function () { renderHourStrip(); renderHourlyChart(); return el('hourstrip').children.length >= 6; })(), el('hourstrip').children.length + ' heures');
+    ok('Rendu soleil / lune', (function () { renderSunMoon(); return el('sun-rise').textContent !== '--:--' && el('moon-phase').textContent.length > 3; })(), el('sun-rise').textContent + ' → ' + el('sun-set').textContent);
+    ok('Changement de métrique horaire', (function () {
+      hourlyMetric = 'rain'; renderHourlyChart(); hourlyMetric = 'cloud'; renderHourlyChart(); hourlyMetric = 'temp'; renderHourlyChart();
+      return !!Charts.instances['canvas-hourly'];
+    })());
+
+    /* ---------- 4. Chatbot ---------- */
+    Chatbot.init();
+    const questions = [
+      'Bonjour', 'Comment ajouter une parcelle ?', 'Quelles villes puis-je suivre ?',
+      'Comment configurer une alerte ?', 'Puis-je traiter demain matin ?',
+      'Quand arroser mon maïs ?', 'Ma tomate a des taches, que faire ?',
+      'Comment élever des tilapias ?', 'Parle-moi du poulet de chair',
+      'Quelle est la meilleure période pour l igname ?', 'Quelle vidéo pour la pluie ?',
+      'Que puis-je semer en ce moment ?', 'Que faire aujourd hui au champ ?',
+      'Quel temps fait il ?', 'Comment changer le thème et les unités ?',
+      'Parle-moi du coton', 'Comment faire du compost ?', 'asdfghjkl qwerty',
+      'Faut-il semer maintenant ?', 'gestion de l eau de l étang',
+      'quel est le prix du marché ?', 'merci beaucoup', 'je veux vendre ma récolte',
+      'quelle culture pour sol argileux inondé ?', 'aide'
+    ];
+    const fails = [];
+    for (const q of questions) {
+      const before = el('chat-log').children.length;
+      try {
+        Chatbot.answer(q);
+        if (el('chat-log').children.length <= before) fails.push(q + ' (aucune réponse)');
+      } catch (e) { fails.push(q + ' -> ' + e.message); }
+    }
+    ok('Chatbot : ' + questions.length + ' questions sans erreur', fails.length === 0, fails.join(' ;; ') || 'aucune anomalie');
+    ok('Chatbot : réponses substantielles', el('chat-log').innerHTML.length > 12000, el('chat-log').innerHTML.length + ' caractères de réponses');
+    ok('Chatbot : culture citée reconnue', (Chatbot.findCrop('et le maïs ?') || {}).name === 'Maïs', (Chatbot.findCrop('et le maïs ?') || {}).name);
+    ok('Chatbot : fiche vidéo reconnue', !!Chatbot.findVideo('que faire en cas de forte pluie'), (Chatbot.findVideo('que faire en cas de forte pluie') || {}).title);
+    ok('Chatbot : base de connaissances', !!matchKB('comment ajouter un champ'), (matchKB('comment ajouter un champ') || {}).entry.title);
+    ok('Chatbot : réponse météo contextuelle', (function () { const d = Chatbot.dynamic('currentWeather', ''); return !!d && d.html.indexOf('Cotonou') >= 0; })());
+    ok('Chatbot : conseil du jour personnalisé', (function () { const d = Chatbot.dynamic('todayAdvice', ''); return !!d && d.html.indexOf('Parcelle test') >= 0; })());
+    ok('Chatbot : suggestion de semis', (function () { const d = Chatbot.dynamic('cropSuggestion', ''); return !!d && d.html.length > 200; })());
+    ok('Chatbot : suggestion vidéo', (function () { const d = Chatbot.dynamic('videoSuggestion', ''); return !!d && d.html.length > 100; })());
+    ok('Chatbot : intentions indexées', INTENTS.length >= 7, INTENTS.length + ' intentions');
+    ok('Chatbot : accents ignorés', !!matchKB('point de rosee') || !!matchKB('semis reussis'));
+    ok('Chatbot : intention météo reconnue', (matchIntent('quel temps fait il ?') || {}).id === 'meteo_actuelle');
+  }
+
+  /* ---------- 5. Vidéos ---------- */
+  ok('Fiches vidéo guidées', VideoDB.all.length >= 12, VideoDB.all.length + ' fiches');
+  ok('Storyboards complets', VideoDB.all.every(function (v) {
+    return v.chapters.length >= 4 && v.chapters.every(function (c) { return c.title && c.narration && c.visual; });
+  }));
+  const sitCounts = {}; VIDEO_SITUATIONS.forEach(function (s) { sitCounts[s.id] = VideoDB.bySituation(s.id).length; });
+  ok('Chaque situation couverte', Object.keys(sitCounts).every(function (k) { return sitCounts[k] > 0; }), JSON.stringify(sitCounts));
+  ok('Durées cohérentes', VideoDB.all.every(function (v) { return VideoDB.totalDuration(v) > 60; }));
+  ok('Question de semis reconnue', matchIntent('Que puis-je semer en ce moment ?').dynamic === 'cropSuggestion');
+  ok('Illustrations adaptées aux étapes',
+    GeneratedVideo.classifyChapter({ title: 'Semis', situation: 'general' }, { title: 'Semer la graine', visual: '' }) === 'seed' &&
+    GeneratedVideo.classifyChapter({ title: 'Froid', situation: 'froid' }, { title: 'Couvrir les jeunes plants', visual: '' }) === 'frost' &&
+    GeneratedVideo.classifyChapter({ title: 'Préparer sa journée', situation: 'general' }, { title: 'Noter le programme dans le journal', visual: '' }) === 'journal' &&
+    GeneratedVideo.classifyChapter({ title: 'Protéger les animaux', situation: 'chaleur' }, { title: 'Surveiller l’étang et ses poissons', visual: '' }) === 'animals');
+
+  /* ---------- 6. Catalogue : filtres, tri, pagination ---------- */
+  if (w) {
+    resetFilters();
+    Culture.renderCatalog();
+    ok('Catalogue complet', Culture.filtered.length === CropDB.all.length, Culture.filtered.length + ' cultures');
+    ok('Pagination à 24 par page', el('crop-grid').children.length === 24 && el('crop-pager').children.length > 2,
+      el('crop-grid').children.length + ' cartes, ' + el('crop-pager').children.length + ' boutons');
+    ok('Filtre par catégorie', (function () {
+      resetFilters(); el('crop-category').value = 'maraichage';
+      const a = Culture.applyFilters();
+      return a.length > 0 && a.length < CropDB.all.length && a.every(function (c) { return c.category === 'maraichage'; });
+    })(), Culture.filtered.length + ' cultures maraîchères');
+    ok('Filtre par compatibilité météo', (function () {
+      resetFilters(); el('crop-compat').value = 'risk';
+      const a = Culture.applyFilters();
+      return a.length > 0 && a.length < CropDB.all.length && a.every(function (c) { return cropCompatibility(c, State.weather).level === 'risk'; });
+    })(), Culture.filtered.length + ' cultures déconseillées');
+    ok('Filtre par besoin en eau', (function () {
+      resetFilters(); el('crop-water').value = 'faible';
+      const a = Culture.applyFilters();
+      return a.length > 0 && a.every(function (c) { return c.water_need === 'faible'; });
+    })(), Culture.filtered.length + ' cultures sobres');
+    ok('Recherche textuelle', (function () {
+      resetFilters(); el('crop-search').value = 'igname';
+      const a = Culture.applyFilters();
+      return a.length > 0 && a.some(function (c) { return c.name === 'Igname'; });
+    })(), Culture.filtered.length + ' résultat(s) pour « igname »');
+    ok('Recherche insensible à la casse', (function () {
+      resetFilters(); el('crop-search').value = 'arachide'; const a = Culture.applyFilters().length;
+      resetFilters(); el('crop-search').value = 'ARACHIDE'; const b = Culture.applyFilters().length;
+      return a === b && b > 0;
+    })(), Culture.filtered.length + ' résultats');
+    ok('Tri par cycle croissant', (function () {
+      resetFilters(); el('crop-sort').value = 'cycle';
+      const a = Culture.applyFilters();
+      const f = cycleRank(a[0]), l = cycleRank(a[a.length - 1]);
+      return f <= l && f > 0 && f < 9999;
+    })(), 'de ' + (Culture.filtered[0] || {}).name + ' (' + cycleRank(Culture.filtered[0]) + ' j)');
+    ok('Tri par besoin en eau décroissant', (function () {
+      resetFilters(); el('crop-sort').value = 'rain';
+      const a = Culture.applyFilters();
+      return CropDB.waterRank(a[0].water_need) >= CropDB.waterRank(a[a.length - 1].water_need);
+    })(), 'en tête : ' + (Culture.filtered[0] || {}).name);
+    ok('Fiche culture détaillée', (function () {
+      resetFilters(); Culture.openCrop('crop-tomate');
+      const h = el('crop-detail').innerHTML;
+      return h.indexOf('Tomate') >= 0 && h.indexOf('Itinéraire technique') > 0 && h.indexOf('Calendrier de semis') > 0 &&
+        h.indexOf('Compatibilité météo actuelle') > 0 && h.indexOf('Ravageurs') > 0;
+    })());
+    ok('Fiche d\'élevage détaillée', (function () {
+      Culture.openCrop('crop-tilapia-du-nil');
+      return el('crop-detail').innerHTML.indexOf('Tilapia') >= 0;
+    })());
+    ok('Parcelles rendues', (function () { Culture.renderPlots(); return el('plot-grid').innerHTML.indexOf('Parcelle test') >= 0; })());
+    ok('Journal rendu avec statistiques', (function () {
+      State.journal = [{ id: 'j1', plot_id: 'p1', date: isoDate(new Date()), kind: 'arrosage', title: 'Arrosage 20 mm', detail: '', cost: 1500, rain_mm: 0 }];
+      Culture.renderJournal();
+      return el('journal-list').innerHTML.indexOf('Arrosage') >= 0 && el('journal-stats').innerHTML.indexOf('1 500') >= 0;
+    })());
+    ok('Sélecteurs de formulaires remplis', (function () {
+      Culture.fillPlotSelects();
+      return el('plot-crop').children.length >= 11 && el('plot-city').children.length === 1 &&
+        el('journal-plot-select').children.length === 1 && el('journal-plot').children.length === 2;
+    })(), el('plot-crop').children.length + ' groupes de cultures');
+  }
+
+  /* ---------- 7. Robustesse ---------- */
+  ok('normalizeText supprime les accents', normalizeText('Élève à São Tomé') === 'eleve a sao tome', normalizeText('Élève à São Tomé'));
+  ok('Échappement HTML', esc('<script>alert(1)<' + '/script>').indexOf('<script') < 0, esc('<b>x</b>'));
+  ok('Conversion en Fahrenheit', (function () { const p = State.prefs.units; State.prefs.units = 'imperial'; const v = tempUnit(25); State.prefs.units = p; return v === 77; })(), '25 °C = 77 °F');
+  ok('Distance géographique', Math.abs(haversine(6.3654, 2.4183, 6.4969, 2.6289) - 27.5) < 4,
+    round1(haversine(6.3654, 2.4183, 6.4969, 2.6289)) + ' km Cotonou → Porto-Novo');
+  ok('Séquences de scripts sûres dans les textes', (function () {
+    const txt = JSON.stringify(CropDB.all.concat(VideoDB.all).concat(KB).map(function (x) { return (x.notes || '') + (x.summary || '') + (x.answer || ''); }));
+    return txt.indexOf('<' + '/script') < 0;
+  })());
+
+  const passed = R.filter(function (r) { return r.indexOf('PASS') === 0; }).length;
+  document.title = 'TESTS ' + passed + '/' + R.length;
+  console.log('=== ' + passed + ' / ' + R.length + ' TESTS REUSSIS ===');
+}
+run().catch(function (e) { console.log('**FAIL** | exception :: ' + e.message + ' @ ' + (e.stack || '').split('\n')[1]); });
+</script>
+</body></html>
