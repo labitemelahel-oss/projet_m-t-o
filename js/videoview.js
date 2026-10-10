@@ -69,7 +69,13 @@ const VideoView = {
         '</div></article>';
     }).join('');
     qsa('.videocard', grid).forEach(function (card) {
-      const open = function () { VideoView.load(card.dataset.video, true); };
+      const open = function () {
+        VideoView.load(card.dataset.video, true);
+        if (window.matchMedia('(max-width: 819px)').matches) {
+          const player = el('player');
+          if (player) player.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      };
       card.addEventListener('click', open);
       card.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(); } });
     });

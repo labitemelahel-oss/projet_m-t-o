@@ -122,9 +122,10 @@ const News = {
     }).join('');
     html += events.map(function (e) {
       const sev = /inondation|flood|sécheresse|drought|cyclone|storm/i.test(e.title + ' ' + e.category);
+      const published = e.published_at ? 'Publié le ' + dateTimeFR(e.published_at) : 'Date de publication inconnue';
       return '<li><span class="livefeed__dot" style="' + (sev ? '' : 'background:var(--accent-2);animation:none;') + '"></span>' +
         '<div><div class="livefeed__title">' + esc(e.title) + '</div>' +
-        '<div class="livefeed__meta">' + esc(e.country || 'International') + ' · ' + esc(e.category) + ' · ' + esc(e.source_name) +
+        '<div class="livefeed__meta">' + esc(e.country || 'International') + ' · ' + esc(e.category) + ' · ' + esc(e.source_name) + ' · ' + esc(published) +
         (e.source_url ? ' · <a href="' + attr(e.source_url) + '" target="_blank" rel="noopener noreferrer">source</a>' : '') + '</div></div></li>';
     }).join('');
     if (!html) html = '<li><span class="livefeed__dot" style="background:var(--accent-2);animation:none;"></span><div><div class="livefeed__title">Aucun événement en cours</div><div class="livefeed__meta">La veille se met à jour automatiquement à l\'ouverture de cet onglet.</div></div></li>';
